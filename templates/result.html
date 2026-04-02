@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnosis Results | MediScan AI+</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 1.5rem;
+            box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.1);
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .risk-low { background: linear-gradient(135deg, #10b981, #059669); }
+        .risk-medium { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .risk-high { background: linear-gradient(135deg, #ef4444, #dc2626); }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-purple-50 min-h-screen p-6">
+
+    <div class="container mx-auto max-w-5xl">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold gradient-bg bg-clip-text text-transparent">📊 Diagnosis Report</h1>
+            <div class="text-sm text-gray-600">Patient: {{ username }}</div>
+        </div>
+
+        <!-- Main Prediction Card -->
+        <div class="glass-card p-8 mb-6 text-center">
+            <div class="text-6xl mb-4">🩺</div>
+            <h2 class="text-3xl font-bold mb-2">{{ prediction }}</h2>
+            <div class="inline-block px-6 py-2 rounded-full text-white font-semibold 
+                {% if risk == 'Low' %}risk-low{% elif risk == 'Medium' %}risk-medium{% else %}risk-high{% endif %}">
+                Risk Level: {{ risk }}
+            </div>
+            <div class="mt-4 text-2xl font-semibold text-purple-600">{{ confidence }}% Confidence</div>
+        </div>
+
+        <!-- Two Column Layout -->
+        <div class="grid md:grid-cols-2 gap-6 mb-6">
+            <!-- Advice & Future Persona -->
+            <div class="glass-card p-6">
+                <h3 class="text-xl font-bold mb-3">💊 Medical Advice</h3>
+                <p class="text-gray-700 leading-relaxed">{{ advice }}</p>
+                
+                <div class="mt-6 pt-4 border-t">
+                    <h4 class="font-semibold mb-2">🔮 Future Health Projection</h4>
+                    <div class="space-y-3">
+                        <div class="bg-red-50 p-3 rounded-lg">
+                            <div class="font-semibold text-red-700">⚠️ If Ignored:</div>
+                            <p class="text-sm text-red-600">{{ future.bad }}</p>
+                        </div>
+                        <div class="bg-green-50 p-3 rounded-lg">
+                            <div class="font-semibold text-green-700">✅ If Action Taken:</div>
+                            <p class="text-sm text-green-600">{{ future.good }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Confidence Chart -->
+            <div class="glass-card p-6">
+                <h3 class="text-xl font-bold mb-3">📈 Confidence Score</h3>
+                <canvas id="confidenceChart" height="200"></canvas>
+            </div>
+        </div>
+
+        <!-- Probability Distribution & Symptom Radar -->
+        <div class="grid md:grid-cols-2 gap-6 mb-6">
+            <div class="glass-card p-6">
+                <h3 class="text-xl font-bold mb-3">🎯 Disease Probability</h3>
+                <canvas id="probChart" height="250"></canvas>
+            </div>
+            <div class="glass-card p-6">
+                <h3 class="text-xl font-bold mb-3">📊 Symptom Profile</h3>
+                <canvas id="radarChart" height="250"></canvas>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-wrap gap-4 justify-center mb-8">
+            <a href="/download" class="bg-blue-600 text-white px-8 py-3 rounded-xl hover:bg-blue-700 transition">📄 Download PDF Report</a>
+            <a href="/blockchain" class="bg-gray-800 text-white px-8 py-3 rounded-xl hover:bg-gray-900 transition">🔗 View Blockchain Record</a>
+            <a href="/" class="bg-purple-600 text-white px-8 py-3 rounded-xl hover:bg-purple-700 transition">⬅ New Diagnosis</a>
+        </div>
+
+        <!-- Chatbot Assistant -->
+        <div class="glass-card p-6">
+            <h3 class="text-xl font-bold mb-3">🤖 MediScan AI Assistant</h3>
+            <div class="flex gap-3">
+                <input type="text" id="chatMsg" placeholder="Ask about symptoms, COVID, weather, or blockchain..." class="flex-1 p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
+                <button onclick="sendChat()" class="bg-purple-600 text-white px-6 py-3 rounded-xl hover:bg-purple-700 transition">Send</button>
+            </div>
+            <div id="chatResponse" class="mt-4 p-4 bg-gray-50 rounded-xl text-gray-700 min-h-[80px]"></div>
+        </div>
+    </div>
+
+    <script>
+        // Confidence Bar Chart
+        new Chart(document.getElementById('confidenceChart'), {
+            type: 'bar',
+            data: {
+                labels: ['Confidence'],
+                datasets: [{
+                    label: 'Prediction Certainty (%)',
+                    data: [{{ confidence }}],
+                    backgroundColor: 'rgba(102, 126, 234, 0.7)',
+                    borderRadius: 10
+                }]
+            },
+            options: {
+                scales: { y: { max: 100, beginAtZero: true } },
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+
+        // Probability Distribution Chart
+        const probData = {{ prob_dist | tojson }};
+        new Chart(document.getElementById('probChart'), {
+            type: 'bar',
+            data: {
+                labels: Object.keys(probData),
+                datasets: [{
+                    label: 'Probability (%)',
+                    data: Object.values(probData),
+                    backgroundColor: 'rgba(118, 75, 162, 0.7)',
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                scales: { y: { max: 100, beginAtZero: true } },
+                indexAxis: 'y',
+                responsive: true
+            }
+        });
+
+        // Radar Chart for Symptoms
+        const symptoms = {{ symptoms | tojson }};
+        const symptomNames = Object.keys(symptoms);
+        const symptomValues = Object.values(symptoms);
+        
+        new Chart(document.getElementById('radarChart'), {
+            type: 'radar',
+            data: {
+                labels: symptomNames.map(s => s.replace('_', ' ').toUpperCase()),
+                datasets: [{
+                    label: 'Symptom Severity',
+                    data: symptomValues,
+                    backgroundColor: 'rgba(102, 126, 234, 0.2)',
+                    borderColor: 'rgba(102, 126, 234, 1)',
+                    borderWidth: 2,
+                    pointBackgroundColor: 'rgba(118, 75, 162, 1)'
+                }]
+            },
+            options: {
+                scales: { r: { min: 0, max: 3, ticks: { stepSize: 1 } } }
+            }
+        });
+
+        function sendChat() {
+            const msg = document.getElementById('chatMsg').value;
+            fetch('/chatbot', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: 'msg=' + encodeURIComponent(msg)
+            })
+            .then(res => res.text())
+            .then(data => {
+                document.getElementById('chatResponse').innerHTML = data;
+                document.getElementById('chatMsg').value = '';
+            });
+        }
+    </script>
+</body>
+</html>

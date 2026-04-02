@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediScan AI+ | AI-Powered Health Diagnosis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 2rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .symptom-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .symptom-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        .severity-slider {
+            background: linear-gradient(90deg, #10b981 0%, #f59e0b 50%, #ef4444 100%);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-purple-50 min-h-screen">
+
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <!-- Header -->
+        <div class="glass-card p-6 mb-8">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-4xl font-bold gradient-bg bg-clip-text text-transparent">🩺 MediScan AI+</h1>
+                    <p class="text-gray-600 mt-2">AI-Powered Precision Health Diagnosis</p>
+                </div>
+                <div class="text-right">
+                    <div class="text-sm text-gray-500">Welcome,</div>
+                    <div class="font-semibold text-lg">{{ username }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Stats Row -->
+        <div class="grid md:grid-cols-2 gap-6 mb-8">
+            <!-- COVID Stats Card -->
+            <div class="glass-card p-6">
+                <h3 class="text-xl font-bold mb-3 flex items-center">🦠 Global COVID-19 Update</h3>
+                {% if covid_stats.error %}
+                    <p class="text-red-500">{{ covid_stats.error }}</p>
+                {% else %}
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-gray-500 text-sm">Total Cases</p>
+                            <p class="text-2xl font-bold text-blue-600">{{ "{:,}".format(covid_stats.cases) }}</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-500 text-sm">Deaths</p>
+                            <p class="text-2xl font-bold text-red-600">{{ "{:,}".format(covid_stats.deaths) }}</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-500 text-sm">Recovered</p>
+                            <p class="text-2xl font-bold text-green-600">{{ "{:,}".format(covid_stats.recovered) }}</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-500 text-sm">New Today</p>
+                            <p class="text-2xl font-bold text-orange-600">{{ "{:,}".format(covid_stats.todayCases) }}</p>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Weather Advice Card -->
+            <div class="glass-card p-6">
+                <h3 class="text-xl font-bold mb-3">🌤️ Weather Health Insight</h3>
+                <p class="text-gray-700">{{ weather_advice }}</p>
+            </div>
+        </div>
+
+        <!-- Symptom Checker Form -->
+        <div class="glass-card p-8">
+            <h2 class="text-2xl font-bold mb-6">🔍 Symptom Checker</h2>
+            <form action="/predict" method="POST" id="symptomForm">
+                <input type="hidden" name="username" value="{{ username }}">
+                
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                    {% set symptoms = ['fever', 'cough', 'fatigue', 'headache', 'nausea', 'sore_throat', 'runny_nose', 'body_ache'] %}
+                    {% set icons = ['🌡️', '🤧', '😴', '🤕', '🤢', '🗣️', '👃', '💪'] %}
+                    {% for symptom in symptoms %}
+                    <div class="symptom-card border-2 border-gray-200 rounded-xl p-4 hover:border-purple-400 transition" onclick="toggleSymptom('{{ symptom }}')">
+                        <div class="flex items-center justify-between mb-3">
+                            <label class="flex items-center space-x-2 cursor-pointer">
+                                <input type="checkbox" name="{{ symptom }}" id="cb_{{ symptom }}" class="w-5 h-5 text-purple-600">
+                                <span class="text-lg font-medium">{{ icons[loop.index0] }} {{ symptom.replace('_', ' ').title() }}</span>
+                            </label>
+                        </div>
+                        <div class="mt-2">
+                            <input type="range" name="{{ symptom }}_severity" id="sev_{{ symptom }}" min="0" max="3" value="0" class="w-full severity-slider rounded-lg" disabled>
+                            <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                <span>None</span><span>Mild</span><span>Moderate</span><span>Severe</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="text-center">
+                    <button type="submit" class="gradient-bg text-white px-12 py-4 rounded-full text-lg font-semibold hover:shadow-xl transition transform hover:scale-105">
+                        🚀 Analyze Symptoms
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Mental Health Section -->
+        <div class="glass-card p-6 mt-8">
+            <h3 class="text-xl font-bold mb-4">🧠 Mental Wellness Check</h3>
+            <div class="flex flex-wrap gap-4 items-center">
+                <select id="mood" class="flex-1 p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
+                    <option value="good">😄 Feeling Great</option>
+                    <option value="stressed">😐 Feeling Stressed</option>
+                    <option value="low">😞 Feeling Low</option>
+                    <option value="overwhelmed">😣 Feeling Overwhelmed</option>
+                </select>
+                <button onclick="checkMood()" class="bg-purple-600 text-white px-6 py-3 rounded-xl hover:bg-purple-700 transition">
+                    Get Support
+                </button>
+            </div>
+            <div id="mentalOutput" class="mt-4 p-4 bg-purple-50 rounded-xl text-gray-700"></div>
+        </div>
+
+        <!-- Quick Links -->
+        <div class="text-center mt-8">
+            <a href="/blockchain" class="inline-block bg-gray-800 text-white px-6 py-3 rounded-xl hover:bg-gray-900 transition mx-2">🔗 View Blockchain Records</a>
+        </div>
+    </div>
+
+    <script>
+        function toggleSymptom(symptom) {
+            const cb = document.getElementById(`cb_${symptom}`);
+            const slider = document.getElementById(`sev_${symptom}`);
+            cb.checked = !cb.checked;
+            slider.disabled = !cb.checked;
+            if (!cb.checked) slider.value = 0;
+        }
+
+        function checkMood() {
+            const mood = document.getElementById('mood').value;
+            fetch('/mental', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: `mood=${mood}`
+            })
+            .then(res => res.text())
+            .then(data => {
+                document.getElementById('mentalOutput').innerHTML = data;
+            });
+        }
+
+        // Initialize: all sliders disabled initially
+        {% for symptom in ['fever', 'cough', 'fatigue', 'headache', 'nausea', 'sore_throat', 'runny_nose', 'body_ache'] %}
+            document.getElementById('sev_{{ symptom }}').disabled = true;
+        {% endfor %}
+    </script>
+</body>
+</html>
